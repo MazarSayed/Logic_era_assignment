@@ -1,0 +1,61 @@
+# Webpage Summarizer Configuration
+
+# LLM Provider Configuration
+llm_providers:
+  openai:
+    enabled: true
+    api_key_env: "OPENAI_API_KEY"
+    models:
+      - "gpt-4o"
+      - "gpt-4o-mini"
+    default_model: "gpt-4o"
+    temperature: 0
+  
+  azure_openai:
+    enabled: true
+    api_key_env: "AZURE_OPENAI_API_KEY"
+    endpoint_env: "AZURE_OPENAI_ENDPOINT"
+    api_version: "2024-02-15-preview"
+    models:
+      - "gpt-4o"
+      - "gpt-4o-mini"
+      - "gpt-4-turbo"
+      - "gpt-35-turbo"
+    default_model: "gpt-4o-mini"
+    temperature: 0
+  
+  anthropic:
+    enabled: true
+    api_key_env: "ANTHROPIC_API_KEY"
+    models:
+      - "claude-3-7-sonnet-latest"
+    default_model: "claude-3-7-sonnet-latest"
+    temperature: 0
+  
+  google:
+    enabled: true
+    api_key_env: "GOOGLE_API_KEY"
+    models:
+      - "gemini-2.5-flash"
+      - "gemini-2.5-pro"
+    default_model: "gemini-2.5-flash"
+    temperature: 0
+
+# Text Processing Configuration
+text_processing:
+  chunk_size: 1000
+  chunk_overlap: 100
+  max_summary_chars: 80000  # Max chars for direct summarization (significantly increased for very detailed summaries)
+
+# Web Scraping Configuration
+scraping:
+  timeout: 15
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+  max_content_size: 5242880  # 5MB max download (increased for maximum content capture)
+  max_text_chars: 500000     # 500KB max text for processing (increased for very detailed analysis)
+
+# UI Configuration
+ui:
+  page_title: "Webpage Summarizer"
+  page_icon: "��"
+  layout: "wide"
