@@ -36,48 +36,10 @@ The core summarization agent built with LangChain that accepts URLs and provides
 - **Polite Responses**: Professional and concise communication style
 - **Follow-up Support**: Designed for conversational interactions
 
-#### LangChain Integration:
-```python
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.messages import SystemMessage, HumanMessage
-
-def summarize_content(content, llm):
-    prompts = load_prompts()
-    parser = PydanticOutputParser(pydantic_object=StructuredSummary)
-    
-    system_prompt = prompts["summarize"]["system"] + f"\n\n{parser.get_format_instructions()}"
-    user_prompt = f"Content: {content}"
-    
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt)
-    ]
-    
-    response = llm.invoke(messages)
-    result = parser.parse(response_text)
-    return result.summary, result.topic
-```
 
 ### 2. Conversation Memory Implementation (`src/core/llm_manager.py`)
 
 Implements Part 2 requirements using LangChain's ConversationBufferWindowMemory for the last three messages.
-
-#### Memory Management:
-```python
-from langchain.memory import ConversationBufferWindowMemory
-from langchain.chains import ConversationChain
-
-def create_conversation_chain(provider_name, model_name, config, memory_window=3):
-    llm = create_llm(provider_name, model_name, config)
-    memory = ConversationBufferWindowMemory(k=memory_window, return_messages=True)
-    
-    conversation = ConversationChain(llm=llm, memory=memory, verbose=False)
-    return conversation
-
-def add_summary_to_memory(conversation_chain, summary, url):
-    context = f"I summarized the webpage at {url}. Here's the summary: {summary}"
-    conversation_chain.predict(input=context)
-```
 
 #### Memory Features:
 - **Sliding Window**: Maintains last 3 conversation exchanges
@@ -88,32 +50,6 @@ def add_summary_to_memory(conversation_chain, summary, url):
 ### 3. FastAPI Endpoint Implementation (`src/api/server.py`)
 
 Implements Part 3 requirements with proper JSON responses and error handling.
-
-#### Core Endpoint:
-```python
-@app.post("/summarize", response_model=SummarizeResponse)
-async def summarize_page(request: SummarizeRequest):
-    config = load_config()
-    
-    url_str = str(request.url)
-    
-    is_valid, message = validate_url(url_str, config)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=message)
-    
-    content, error = fetch_and_clean_content(url_str, config)
-    if error:
-        raise HTTPException(status_code=422, detail=error)
-    
-    llm = create_llm(provider_name, selected_model, config)
-    summary, main_topic = summarize_content(content, llm)
-    
-    return SummarizeResponse(
-        summary=summary,
-        main_topic=main_topic,
-        session_id=session_id
-    )
-```
 
 #### API Response Format (Task Requirement):
 ```json
@@ -134,28 +70,6 @@ async def summarize_page(request: SummarizeRequest):
 
 Optimized web content extraction that replaces WebBrowserTool for better performance and control.
 
-#### Content Extraction Strategy:
-```python
-def extract_main_content(soup):
-    main_selectors = [
-        'main', 'article', '[role="main"]', 
-        '.content', '.post-content', '.entry-content',
-        '#content', '#main-content', '.main-content'
-    ]
-    
-    for selector in main_selectors:
-        main_content = soup.select_one(selector)
-        if main_content:
-            return main_content
-    
-    text_containers = soup.find_all(['div', 'section', 'article'])
-    if text_containers:
-        largest = max(text_containers, key=lambda x: len(x.get_text(strip=True)))
-        if len(largest.get_text(strip=True)) > 200:
-            return largest
-    
-    return soup.find('body') or soup
-```
 
 #### Performance Optimizations:
 - **Smart Content Detection**: Multiple strategies for finding main content
@@ -167,18 +81,6 @@ def extract_main_content(soup):
 
 Supports multiple AI providers as specified in the bonus requirements.
 
-#### Supported Providers:
-```python
-def create_llm(provider_name, model_name, config):
-    if provider_name == "openai":
-        return ChatOpenAI(model=model_name, temperature=temperature, api_key=api_key)
-    elif provider_name == "azure_openai":
-        return AzureChatOpenAI(azure_deployment=model_name, azure_endpoint=endpoint, api_key=api_key)
-    elif provider_name == "anthropic":
-        return ChatAnthropic(model=model_name, temperature=temperature, api_key=api_key)
-    elif provider_name == "google":
-        return ChatGoogleGenerativeAI(model=model_name, temperature=temperature, api_key=api_key)
-```
 
 ## 🎨 Frontend Implementation
 
@@ -193,45 +95,11 @@ User-friendly interface for interacting with the LangChain agent.
 - **Chat Interface**: Follow-up questions with conversation memory
 - **Error Handling**: User-friendly error messages
 
-#### Chat Interface:
-```python
-if hasattr(st.session_state, 'current_session_id') and st.session_state.current_session_id:
-    st.markdown("### 💬 **Chat with Summary**")
-    st.info(f"💡 **Context:** {st.session_state.current_topic} - Ask questions about the content above")
-    
-    with st.form("chat_form", clear_on_submit=True):
-        user_question = st.text_input("Ask a question about the summary:")
-        submitted = st.form_submit_button("💬 Ask", type="primary")
-        
-        if submitted and user_question:
-            chat_result = call_api_chat(st.session_state.current_session_id, user_question)
-            st.session_state.chat_history.append((user_question, chat_result["answer"]))
-```
 
 ## 📊 Data Models (`models.py`)
 
 Clean, validated data structures using Pydantic for API requests and responses.
 
-#### Core Models:
-```python
-class SummarizeRequest(BaseModel):
-    url: HttpUrl
-    provider: Optional[str] = None
-    model: Optional[str] = None
-
-class SummarizeResponse(BaseModel):
-    summary: str
-    main_topic: str
-    session_id: Optional[str] = None
-
-class ChatRequest(BaseModel):
-    session_id: str
-    question: str
-
-class ChatResponse(BaseModel):
-    answer: str
-    session_id: str
-```
 
 ## ⚙️ Configuration Management
 
@@ -245,57 +113,8 @@ AZURE_OPENAI_ENDPOINT=your_azure_endpoint_here
 ```
 
 ### Application Config (`conf/config.yaml`)
-```yaml
-llm_providers:
-  openai:
-    enabled: true
-    models: ["gpt-4o", "gpt-4o-mini"]
-    default_model: "gpt-4o"
-    temperature: 0
-  
-  anthropic:
-    enabled: true
-    models: ["claude-3-7-sonnet-latest"]
-    default_model: "claude-3-7-sonnet-latest"
-    temperature: 0
-
-text_processing:
-  chunk_size: 1000
-  chunk_overlap: 100
-  max_summary_chars: 80000
-
-scraping:
-  timeout: 15
-  max_content_size: 5242880
-  max_text_chars: 500000
-```
 
 ### AI Prompts (`prompts/prompts.yaml`)
-```yaml
-summarize:
-  system: |
-    You are an expert content analyst that creates structured analysis of web content.
-    
-    Your task is to analyze the provided content and deliver a structured response containing:
-    
-    1. **Topic**: A concise, descriptive main topic (3-6 words) that identifies WHAT or WHO the content is about.
-    2. **Summary**: A comprehensive and extremely detailed summary (8-10 substantial paragraphs, minimum 300-500 words)
-    
-    CRITICAL REQUIREMENTS:
-    - Each paragraph should be 3-5 sentences long with substantial detail
-    - Include specific names, dates, places, numbers, and statistics wherever possible
-    - Provide context and background for all major points
-    - Use rich, descriptive language while maintaining professionalism
-
-conversation:
-  system: |
-    You are a knowledgeable assistant helping users understand previously summarized web content.
-    
-    Guidelines:
-    - Reference specific details from the summary when possible
-    - Provide accurate, helpful responses based on the context
-    - Maintain a helpful and professional tone
-```
 
 ## 🔄 Request Flow
 
